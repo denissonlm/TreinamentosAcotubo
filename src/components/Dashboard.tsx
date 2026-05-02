@@ -4,8 +4,9 @@ import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend
 } from 'recharts';
-import { Search, AlertTriangle, CheckCircle, BookOpen, Clock } from 'lucide-react';
+import { Search, AlertTriangle, CheckCircle, BookOpen, Clock, Printer } from 'lucide-react';
 import { format } from 'date-fns';
+import { ReportView } from './ReportView';
 
 interface DashboardProps {
   data: EmployeeStatus[];
@@ -24,6 +25,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
   const [filterManager, setFilterManager] = useState<string>('ALL');
   const [filterUnit, setFilterUnit] = useState<string>('ALL');
   const [chartView, setChartView] = useState<'cargo' | 'unidade'>('cargo');
+  const [showReport, setShowReport] = useState(false);
 
   const uniqueManagers = useMemo(() => Array.from(new Set(data.map(d => d.employee.manager).filter(Boolean))).sort(), [data]);
   const uniqueUnits = useMemo(() => Array.from(new Set(data.map(d => d.employee.unit).filter(Boolean))).sort(), [data]);
@@ -105,6 +107,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
     return <span className="status-badge status-na">N/A</span>;
   };
 
+  if (showReport) {
+    return <ReportView data={data} onClose={() => setShowReport(false)} />;
+  }
+
   return (
     <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       
@@ -114,9 +120,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
           <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Dashboard de Treinamentos</h1>
           <p style={{ color: 'var(--text-muted)' }}>Visão geral do Grupo Açotubo</p>
         </div>
-        <button className="btn" style={{ background: 'var(--surface-border)', color: 'white' }} onClick={onReset}>
-          Voltar para Upload
-        </button>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <button className="btn" style={{ background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShowReport(true)}>
+            <Printer size={18} />
+            Gerar Relatório PDF
+          </button>
+          <button className="btn" style={{ background: 'var(--surface-border)', color: 'white' }} onClick={onReset}>
+            Voltar para Upload
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
