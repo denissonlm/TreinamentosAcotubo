@@ -305,16 +305,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                   dataKey="regular" 
                   name="Regular" 
                   stackId="a" 
-                  fill={COLORS.REGULAR} 
                   radius={[0, 0, 4, 4]} 
-                />
+                >
+                  {(chartView === 'cargo' ? roleBarData : unitBarData).map((entry, index) => (
+                    <Cell 
+                      key={`cell-reg-${index}`} 
+                      fill={COLORS.REGULAR} 
+                      onClick={() => {
+                        if (chartView === 'unidade') toggleFilterUnit(entry.role);
+                        if (chartView === 'cargo') toggleFilterRole(entry.role);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </Bar>
                 <Bar 
                   dataKey="irregular" 
                   name="Irregular" 
                   stackId="a" 
-                  fill={COLORS.IRREGULAR} 
                   radius={[4, 4, 0, 0]} 
-                />
+                >
+                  {(chartView === 'cargo' ? roleBarData : unitBarData).map((entry, index) => (
+                    <Cell 
+                      key={`cell-irreg-${index}`} 
+                      fill={COLORS.IRREGULAR} 
+                      onClick={() => {
+                        if (chartView === 'unidade') toggleFilterUnit(entry.role);
+                        if (chartView === 'cargo') toggleFilterRole(entry.role);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
