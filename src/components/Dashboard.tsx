@@ -141,7 +141,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
   }
 
   return (
-    <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <>
+      <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
@@ -442,7 +443,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
              </div>
           )}
         </div>
+        </div>
       </div>
+    </div>
 
       {/* Floating Active Filters Bar */}
       {activeFilters.length > 0 && (
@@ -503,7 +506,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
           </button>
         </div>
       )}
-
-    </div>
+    </>
   );
 };
