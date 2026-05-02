@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { EmployeeStatus } from '../types';
 import { 
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend
+  BarChart, Bar, XAxis, ResponsiveContainer, Legend
 } from 'recharts';
 import { Search, AlertTriangle, CheckCircle, BookOpen, Clock, Printer, X, Filter } from 'lucide-react';
 import { format } from 'date-fns';
@@ -268,7 +268,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
-                  onClick={(entry) => toggleFilterStatus(entry.name)}
+                  onClick={(entry: any) => toggleFilterStatus(entry.name)}
                   style={{ cursor: 'pointer' }}
                 >
                   {pieData.map((entry, index) => (
@@ -314,7 +314,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
               <BarChart 
                 data={chartView === 'cargo' ? roleBarData : chartView === 'unidade' ? unitBarData : managerBarData} 
                 margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-                onClick={(state) => {
+                onClick={(state: any) => {
                   if (state && state.activePayload && state.activePayload.length > 0) {
                     const value = state.activePayload[0].payload.role;
                     if (chartView === 'unidade') toggleFilterUnit(value);
