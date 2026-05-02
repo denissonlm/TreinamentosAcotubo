@@ -24,30 +24,54 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterManager, setFilterManager] = useState<string>('ALL');
   const [filterUnit, setFilterUnit] = useState<string>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'MANDATORY' | 'EVENTUAL'>('ALL');
   const [chartView, setChartView] = useState<'cargo' | 'unidade'>('cargo');
   const [showReport, setShowReport] = useState(false);
+
+  // Cross-filtered data used by everything
+  const crossFilteredData = useMemo(() => {
+    return data.filter(d => {
+      const matchesSearch = 
+        d.employee.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        d.employee.re.includes(searchTerm);
+      
+      const matchesStatus = filterStatus === 'ALL' || d.overallStatus === filterStatus;
+      const matchesManager = filterManager === 'ALL' || d.employee.manager === filterManager;
+      const matchesUnit = filterUnit === 'ALL' || d.employee.unit === filterUnit;
+      const matchesType = filterType === 'ALL' || 
+                          (filterType === 'MANDATORY' && d.isMandatory) || 
+                          (filterType === 'EVENTUAL' && d.isEventual);
+      
+      return matchesSearch && matchesStatus && matchesManager && matchesUnit && matchesType;
+    });
+  }, [data, searchTerm, filterStatus, filterManager, filterUnit, filterType]);
 
   const uniqueManagers = useMemo(() => Array.from(new Set(data.map(d => d.employee.manager).filter(Boolean))).sort(), [data]);
   const uniqueUnits = useMemo(() => Array.from(new Set(data.map(d => d.employee.unit).filter(Boolean))).sort(), [data]);
 
   // KPI calculations
-  const totalMonitored = data.length;
-  const mandatoryCount = data.filter(d => d.isMandatory).length;
-  const eventualCount = data.filter(d => d.isEventual).length;
-  const regularEmployees = data.filter(d => d.overallStatus === 'REGULAR').length;
-  const irregularEmployees = data.filter(d => d.overallStatus === 'IRREGULAR').length;
+  const totalMonitored = crossFilteredData.length;
+  const mandatoryCount = crossFilteredData.filter(d => d.isMandatory).length;
+  const eventualCount = crossFilteredData.filter(d => d.isEventual).length;
+  const regularEmployees = crossFilteredData.filter(d => d.overallStatus === 'REGULAR').length;
+  const irregularEmployees = crossFilteredData.filter(d => d.overallStatus === 'IRREGULAR').length;
   const regularPercentage = totalMonitored > 0 ? Math.round((regularEmployees / totalMonitored) * 100) : 0;
   const irregularPercentage = totalMonitored > 0 ? Math.round((irregularEmployees / totalMonitored) * 100) : 0;
 
+  // Toggle handlers for cross-filtering
+  const toggleFilterStatus = (status: string) => setFilterStatus(prev => prev === status ? 'ALL' : status);
+  const toggleFilterType = (type: 'MANDATORY' | 'EVENTUAL') => setFilterType(prev => prev === type ? 'ALL' : type);
+  const toggleFilterUnit = (unit: string) => setFilterUnit(prev => prev === unit ? 'ALL' : unit);
+
   // Chart Data
   const pieData = [
-    { name: 'Regular', value: regularEmployees, color: COLORS.REGULAR },
-    { name: 'Irregular', value: irregularEmployees, color: COLORS.IRREGULAR },
+    { name: 'REGULAR', value: regularEmployees, color: COLORS.REGULAR },
+    { name: 'IRREGULAR', value: irregularEmployees, color: COLORS.IRREGULAR },
   ];
 
   const roleBarData = useMemo(() => {
     const roleMap = new Map<string, { role: string, regular: number, irregular: number }>();
-    data.forEach(d => {
+    crossFilteredData.forEach(d => {
       // Only group roles that actually have trainings required or eventuais mapped
       // To simplify, group all roles that have at least one training or are mandatory
       const role = d.employee.role;
@@ -63,11 +87,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
       .filter(d => d.regular > 0 || d.irregular > 0)
       .sort((a, b) => b.irregular - a.irregular)
       .slice(0, 5); // Top 5 roles with issues
-  }, [data]);
+  }, [crossFilteredData]);
 
   const unitBarData = useMemo(() => {
     const unitMap = new Map<string, { role: string, regular: number, irregular: number }>();
-    data.forEach(d => {
+    crossFilteredData.forEach(d => {
       const unit = d.employee.unit;
       if (!unitMap.has(unit)) {
         unitMap.set(unit, { role: unit, regular: 0, irregular: 0 }); // Using 'role' for x-axis consistency
@@ -81,20 +105,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
       .filter(d => d.regular > 0 || d.irregular > 0)
       .sort((a, b) => b.irregular - a.irregular)
       .slice(0, 5); // Top 5 units with issues
-  }, [data]);
-
-  // Filtering
-  const filteredData = data.filter(d => {
-    const matchesSearch = 
-      d.employee.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      d.employee.re.includes(searchTerm);
-    
-    const matchesStatus = filterStatus === 'ALL' || d.overallStatus === filterStatus;
-    const matchesManager = filterManager === 'ALL' || d.employee.manager === filterManager;
-    const matchesUnit = filterUnit === 'ALL' || d.employee.unit === filterUnit;
-    
-    return matchesSearch && matchesStatus && matchesManager && matchesUnit;
-  });
+  }, [crossFilteredData]);
 
   const formatDate = (date: Date | null) => {
     if (!date) return '-';
@@ -133,7 +144,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div 
+          className="glass-panel" 
+          onClick={() => toggleFilterType('MANDATORY')}
+          style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', border: filterType === 'MANDATORY' ? '2px solid var(--primary)' : undefined, transform: filterType === 'MANDATORY' ? 'translateY(-2px)' : 'none', transition: 'all 0.2s' }}
+        >
           <div style={{ padding: '16px', background: 'rgba(79, 70, 229, 0.2)', borderRadius: '12px' }}>
             <BookOpen color="var(--primary)" size={32} />
           </div>
@@ -143,7 +158,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
           </div>
         </div>
 
-        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div 
+          className="glass-panel" 
+          onClick={() => toggleFilterType('EVENTUAL')}
+          style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', border: filterType === 'EVENTUAL' ? '2px solid #F59E0B' : undefined, transform: filterType === 'EVENTUAL' ? 'translateY(-2px)' : 'none', transition: 'all 0.2s' }}
+        >
           <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.2)', borderRadius: '12px' }}>
             <Clock color="#F59E0B" size={32} />
           </div>
@@ -153,7 +172,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
           </div>
         </div>
 
-        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div 
+          className="glass-panel" 
+          onClick={() => toggleFilterStatus('REGULAR')}
+          style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', border: filterStatus === 'REGULAR' ? `2px solid ${COLORS.REGULAR}` : undefined, transform: filterStatus === 'REGULAR' ? 'translateY(-2px)' : 'none', transition: 'all 0.2s' }}
+        >
           <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.2)', borderRadius: '12px' }}>
             <CheckCircle color={COLORS.REGULAR} size={32} />
           </div>
@@ -166,7 +189,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
           </div>
         </div>
 
-        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div 
+          className="glass-panel" 
+          onClick={() => toggleFilterStatus('IRREGULAR')}
+          style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', border: filterStatus === 'IRREGULAR' ? `2px solid ${COLORS.IRREGULAR}` : undefined, transform: filterStatus === 'IRREGULAR' ? 'translateY(-2px)' : 'none', transition: 'all 0.2s' }}
+        >
           <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.2)', borderRadius: '12px' }}>
             <AlertTriangle color={COLORS.IRREGULAR} size={32} />
           </div>
@@ -193,12 +220,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
+                  onClick={(entry) => toggleFilterStatus(entry.name)}
+                  style={{ cursor: 'pointer' }}
                 >
                   {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(0,0,0,0)" />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.color} 
+                      stroke="rgba(0,0,0,0)" 
+                      opacity={filterStatus === 'ALL' || filterStatus === entry.name ? 1 : 0.3} 
+                    />
                   ))}
                 </Pie>
                 <RechartsTooltip 
+                  cursor={false}
                   contentStyle={{ background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: '8px', color: 'white' }}
                   itemStyle={{ color: 'white' }}
                 />
@@ -224,12 +259,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
           </div>
           <div style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartView === 'cargo' ? roleBarData : unitBarData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-border)" vertical={false} />
-                <XAxis dataKey="role" stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)', fontSize: 12}} />
-                <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} />
+              <BarChart 
+                data={chartView === 'cargo' ? roleBarData : unitBarData} 
+                margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                onClick={(state) => {
+                  if (state && state.activePayload && state.activePayload.length > 0) {
+                    if (chartView === 'unidade') toggleFilterUnit(state.activePayload[0].payload.role);
+                  }
+                }}
+                style={{ cursor: chartView === 'unidade' ? 'pointer' : 'default' }}
+              >
+                <XAxis dataKey="role" stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)', fontSize: 12}} axisLine={false} tickLine={false} />
                 <RechartsTooltip 
-                  cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                  cursor={false}
                   contentStyle={{ background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: '8px', color: 'white' }}
                 />
                 <Legend />
@@ -327,7 +369,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
               </tr>
             </thead>
             <tbody>
-              {filteredData.slice(0, 100).map(row => (
+              {crossFilteredData.slice(0, 100).map(row => (
                 <tr key={row.employee.re} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '16px 12px' }}>{row.employee.re}</td>
                   <td style={{ padding: '16px 12px', fontWeight: '500' }}>{row.employee.name}</td>
@@ -367,7 +409,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                   </td>
                 </tr>
               ))}
-              {filteredData.length === 0 && (
+              {crossFilteredData.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
                     Nenhum registro encontrado.
@@ -376,9 +418,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
               )}
             </tbody>
           </table>
-          {filteredData.length > 100 && (
+          {crossFilteredData.length > 100 && (
              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-               Mostrando 100 de {filteredData.length} resultados.
+               Mostrando 100 de {crossFilteredData.length} resultados.
              </div>
           )}
         </div>
