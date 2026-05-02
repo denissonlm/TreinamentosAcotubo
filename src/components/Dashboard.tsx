@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend
 } from 'recharts';
-import { Search, AlertTriangle, CheckCircle, BookOpen, Clock, Printer } from 'lucide-react';
+import { Search, AlertTriangle, CheckCircle, BookOpen, Clock, Printer, X, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReportView } from './ReportView';
 
@@ -62,6 +62,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
   const toggleFilterStatus = (status: string) => setFilterStatus(prev => prev === status ? 'ALL' : status);
   const toggleFilterType = (type: 'MANDATORY' | 'EVENTUAL') => setFilterType(prev => prev === type ? 'ALL' : type);
   const toggleFilterUnit = (unit: string) => setFilterUnit(prev => prev === unit ? 'ALL' : unit);
+
+  const clearAllFilters = () => {
+    setFilterStatus('ALL');
+    setFilterType('ALL');
+    setFilterUnit('ALL');
+    setFilterManager('ALL');
+    setSearchTerm('');
+  };
+
+  const activeFilters = useMemo(() => {
+    const filters = [];
+    if (filterStatus !== 'ALL') filters.push({ label: `Status: ${filterStatus}`, clear: () => setFilterStatus('ALL') });
+    if (filterType !== 'ALL') filters.push({ label: `Tipo: ${filterType === 'MANDATORY' ? 'Obrigatório' : 'Eventual'}`, clear: () => setFilterType('ALL') });
+    if (filterUnit !== 'ALL') filters.push({ label: `Unidade: ${filterUnit}`, clear: () => setFilterUnit('ALL') });
+    if (filterManager !== 'ALL') filters.push({ label: `Supervisor: ${filterManager}`, clear: () => setFilterManager('ALL') });
+    if (searchTerm !== '') filters.push({ label: `Busca: ${searchTerm}`, clear: () => setSearchTerm('') });
+    return filters;
+  }, [filterStatus, filterType, filterUnit, filterManager, searchTerm]);
 
   // Chart Data
   const pieData = [
@@ -425,6 +443,66 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
           )}
         </div>
       </div>
+
+      {/* Floating Active Filters Bar */}
+      {activeFilters.length > 0 && (
+        <div className="no-print" style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          borderRadius: '99px',
+          padding: '12px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
+          zIndex: 1000,
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
+            <Filter size={16} />
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>Filtros Ativos:</span>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {activeFilters.map((f, i) => (
+              <div key={i} style={{
+                background: 'rgba(255,255,255,0.1)',
+                padding: '4px 12px',
+                borderRadius: '99px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                color: 'white'
+              }}>
+                {f.label}
+                <button onClick={f.clear} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 0 }}>
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
+
+          <button onClick={clearAllFilters} style={{ 
+            background: 'transparent', 
+            border: 'none', 
+            color: '#ef4444', 
+            fontWeight: '600', 
+            fontSize: '13px', 
+            cursor: 'pointer',
+            padding: '4px 8px'
+          }}>
+            Limpar Todos
+          </button>
+        </div>
+      )}
 
     </div>
   );
