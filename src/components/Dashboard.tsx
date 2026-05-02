@@ -26,7 +26,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
   const [filterUnit, setFilterUnit] = useState<string>('ALL');
   const [filterType, setFilterType] = useState<'ALL' | 'MANDATORY' | 'EVENTUAL'>('ALL');
   const [filterRole, setFilterRole] = useState<string>('ALL');
-  const [chartView, setChartView] = useState<'cargo' | 'unidade'>('cargo');
+  const [chartView, setChartView] = useState<'cargo' | 'unidade' | 'supervisor'>('cargo');
   const [showReport, setShowReport] = useState(false);
 
   // Cross-filtered data used by everything
@@ -63,8 +63,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
   // Toggle handlers for cross-filtering
   const toggleFilterStatus = (status: string) => setFilterStatus(prev => prev === status ? 'ALL' : status);
   const toggleFilterType = (type: 'MANDATORY' | 'EVENTUAL') => setFilterType(prev => prev === type ? 'ALL' : type);
-  const toggleFilterUnit = (unit: string) => setFilterUnit(prev => prev === unit ? 'ALL' : unit);
+  const toggleFilterUnit = (unit: string) => {
+    setFilterUnit(prev => {
+      if (prev !== unit) setChartView('supervisor');
+      return prev === unit ? 'ALL' : unit;
+    });
+  };
   const toggleFilterRole = (role: string) => setFilterRole(prev => prev === role ? 'ALL' : role);
+  const toggleFilterManager = (manager: string) => setFilterManager(prev => prev === manager ? 'ALL' : manager);
 
   const clearAllFilters = () => {
     setFilterStatus('ALL');
@@ -128,6 +134,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
       .filter(d => d.regular > 0 || d.irregular > 0)
       .sort((a, b) => b.irregular - a.irregular)
       .slice(0, 5); // Top 5 units with issues
+  }, [crossFilteredData]);
+
+  const managerBarData = useMemo(() => {
+    const managerMap = new Map<string, { role: string, regular: number, irregular: number }>();
+    crossFilteredData.forEach(d => {
+      const manager = d.employee.manager || 'Sem Supervisor';
+      if (!managerMap.has(manager)) {
+        managerMap.set(manager, { role: manager, regular: 0, irregular: 0 }); // Using 'role' for x-axis consistency
+      }
+      const entry = managerMap.get(manager)!;
+      if (d.overallStatus === 'REGULAR') entry.regular += 1;
+      else entry.irregular += 1;
+    });
+    
+    return Array.from(managerMap.values())
+      .filter(d => d.regular > 0 || d.irregular > 0)
+      .sort((a, b) => b.irregular - a.irregular)
+      .slice(0, 5); // Top 5 managers with issues
   }, [crossFilteredData]);
 
   const formatDate = (date: Date | null) => {
@@ -269,7 +293,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
 
         <div className="glass-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', margin: 0 }}>Irregularidades por {chartView === 'cargo' ? 'Cargo' : 'Unidade'} (Top 5)</h3>
+            <h3 style={{ fontSize: '18px', margin: 0 }}>Irregularidades por {chartView === 'cargo' ? 'Cargo' : chartView === 'unidade' ? 'Unidade' : 'Supervisor'} (Top 5)</h3>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 
                 onClick={() => setChartView('cargo')}
@@ -279,18 +303,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                 onClick={() => setChartView('unidade')}
                 style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--surface-border)', background: chartView === 'unidade' ? 'var(--primary)' : 'rgba(0,0,0,0.2)', color: 'white', cursor: 'pointer', fontSize: '12px', transition: 'all 0.2s' }}
               >Unidade</button>
+              <button 
+                onClick={() => setChartView('supervisor')}
+                style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--surface-border)', background: chartView === 'supervisor' ? 'var(--primary)' : 'rgba(0,0,0,0.2)', color: 'white', cursor: 'pointer', fontSize: '12px', transition: 'all 0.2s' }}
+              >Supervisor</button>
             </div>
           </div>
           <div style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
-                data={chartView === 'cargo' ? roleBarData : unitBarData} 
+                data={chartView === 'cargo' ? roleBarData : chartView === 'unidade' ? unitBarData : managerBarData} 
                 margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
                 onClick={(state) => {
                   if (state && state.activePayload && state.activePayload.length > 0) {
                     const value = state.activePayload[0].payload.role;
                     if (chartView === 'unidade') toggleFilterUnit(value);
                     if (chartView === 'cargo') toggleFilterRole(value);
+                    if (chartView === 'supervisor') toggleFilterManager(value);
                   }
                 }}
                 style={{ cursor: 'pointer' }}
@@ -307,13 +336,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                   stackId="a" 
                   radius={[0, 0, 4, 4]} 
                 >
-                  {(chartView === 'cargo' ? roleBarData : unitBarData).map((entry, index) => (
+                  {(chartView === 'cargo' ? roleBarData : chartView === 'unidade' ? unitBarData : managerBarData).map((entry, index) => (
                     <Cell 
                       key={`cell-reg-${index}`} 
                       fill={COLORS.REGULAR} 
                       onClick={() => {
                         if (chartView === 'unidade') toggleFilterUnit(entry.role);
                         if (chartView === 'cargo') toggleFilterRole(entry.role);
+                        if (chartView === 'supervisor') toggleFilterManager(entry.role);
                       }}
                       style={{ cursor: 'pointer' }}
                     />
@@ -325,13 +355,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                   stackId="a" 
                   radius={[4, 4, 0, 0]} 
                 >
-                  {(chartView === 'cargo' ? roleBarData : unitBarData).map((entry, index) => (
+                  {(chartView === 'cargo' ? roleBarData : chartView === 'unidade' ? unitBarData : managerBarData).map((entry, index) => (
                     <Cell 
                       key={`cell-irreg-${index}`} 
                       fill={COLORS.IRREGULAR} 
                       onClick={() => {
                         if (chartView === 'unidade') toggleFilterUnit(entry.role);
                         if (chartView === 'cargo') toggleFilterRole(entry.role);
+                        if (chartView === 'supervisor') toggleFilterManager(entry.role);
                       }}
                       style={{ cursor: 'pointer' }}
                     />
