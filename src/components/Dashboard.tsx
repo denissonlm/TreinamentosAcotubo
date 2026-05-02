@@ -443,7 +443,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
              </div>
           )}
         </div>
-        </div>
       </div>
     </div>
 
