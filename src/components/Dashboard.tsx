@@ -287,16 +287,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                 data={chartView === 'cargo' ? roleBarData : unitBarData} 
                 margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
                 onClick={(state) => {
-                  if (state && state.activeLabel) {
-                    if (chartView === 'unidade') toggleFilterUnit(state.activeLabel);
-                    if (chartView === 'cargo') toggleFilterRole(state.activeLabel);
+                  if (state && state.activePayload && state.activePayload.length > 0) {
+                    const value = state.activePayload[0].payload.role;
+                    if (chartView === 'unidade') toggleFilterUnit(value);
+                    if (chartView === 'cargo') toggleFilterRole(value);
                   }
                 }}
                 style={{ cursor: 'pointer' }}
               >
                 <XAxis dataKey="role" stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)', fontSize: 12}} axisLine={false} tickLine={false} />
                 <RechartsTooltip 
-                  cursor={false}
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                   contentStyle={{ background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: '8px', color: 'white' }}
                 />
                 <Legend />
@@ -306,10 +307,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                   stackId="a" 
                   fill={COLORS.REGULAR} 
                   radius={[0, 0, 4, 4]} 
-                  onClick={(data) => {
-                    if (chartView === 'unidade' && data.role) toggleFilterUnit(data.role);
-                    if (chartView === 'cargo' && data.role) toggleFilterRole(data.role);
-                  }}
                 />
                 <Bar 
                   dataKey="irregular" 
@@ -317,10 +314,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                   stackId="a" 
                   fill={COLORS.IRREGULAR} 
                   radius={[4, 4, 0, 0]} 
-                  onClick={(data) => {
-                    if (chartView === 'unidade' && data.role) toggleFilterUnit(data.role);
-                    if (chartView === 'cargo' && data.role) toggleFilterRole(data.role);
-                  }}
                 />
               </BarChart>
             </ResponsiveContainer>
