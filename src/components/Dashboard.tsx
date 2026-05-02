@@ -25,6 +25,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
   const [filterManager, setFilterManager] = useState<string>('ALL');
   const [filterUnit, setFilterUnit] = useState<string>('ALL');
   const [filterType, setFilterType] = useState<'ALL' | 'MANDATORY' | 'EVENTUAL'>('ALL');
+  const [filterRole, setFilterRole] = useState<string>('ALL');
   const [chartView, setChartView] = useState<'cargo' | 'unidade'>('cargo');
   const [showReport, setShowReport] = useState(false);
 
@@ -38,13 +39,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
       const matchesStatus = filterStatus === 'ALL' || d.overallStatus === filterStatus;
       const matchesManager = filterManager === 'ALL' || d.employee.manager === filterManager;
       const matchesUnit = filterUnit === 'ALL' || d.employee.unit === filterUnit;
+      const matchesRole = filterRole === 'ALL' || d.employee.role === filterRole;
       const matchesType = filterType === 'ALL' || 
                           (filterType === 'MANDATORY' && d.isMandatory) || 
                           (filterType === 'EVENTUAL' && d.isEventual);
       
-      return matchesSearch && matchesStatus && matchesManager && matchesUnit && matchesType;
+      return matchesSearch && matchesStatus && matchesManager && matchesUnit && matchesRole && matchesType;
     });
-  }, [data, searchTerm, filterStatus, filterManager, filterUnit, filterType]);
+  }, [data, searchTerm, filterStatus, filterManager, filterUnit, filterRole, filterType]);
 
   const uniqueManagers = useMemo(() => Array.from(new Set(data.map(d => d.employee.manager).filter(Boolean))).sort(), [data]);
   const uniqueUnits = useMemo(() => Array.from(new Set(data.map(d => d.employee.unit).filter(Boolean))).sort(), [data]);
@@ -62,11 +64,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
   const toggleFilterStatus = (status: string) => setFilterStatus(prev => prev === status ? 'ALL' : status);
   const toggleFilterType = (type: 'MANDATORY' | 'EVENTUAL') => setFilterType(prev => prev === type ? 'ALL' : type);
   const toggleFilterUnit = (unit: string) => setFilterUnit(prev => prev === unit ? 'ALL' : unit);
+  const toggleFilterRole = (role: string) => setFilterRole(prev => prev === role ? 'ALL' : role);
 
   const clearAllFilters = () => {
     setFilterStatus('ALL');
     setFilterType('ALL');
     setFilterUnit('ALL');
+    setFilterRole('ALL');
     setFilterManager('ALL');
     setSearchTerm('');
   };
@@ -76,10 +80,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
     if (filterStatus !== 'ALL') filters.push({ label: `Status: ${filterStatus}`, clear: () => setFilterStatus('ALL') });
     if (filterType !== 'ALL') filters.push({ label: `Tipo: ${filterType === 'MANDATORY' ? 'Obrigatório' : 'Eventual'}`, clear: () => setFilterType('ALL') });
     if (filterUnit !== 'ALL') filters.push({ label: `Unidade: ${filterUnit}`, clear: () => setFilterUnit('ALL') });
+    if (filterRole !== 'ALL') filters.push({ label: `Cargo: ${filterRole}`, clear: () => setFilterRole('ALL') });
     if (filterManager !== 'ALL') filters.push({ label: `Supervisor: ${filterManager}`, clear: () => setFilterManager('ALL') });
     if (searchTerm !== '') filters.push({ label: `Busca: ${searchTerm}`, clear: () => setSearchTerm('') });
     return filters;
-  }, [filterStatus, filterType, filterUnit, filterManager, searchTerm]);
+  }, [filterStatus, filterType, filterUnit, filterRole, filterManager, searchTerm]);
 
   // Chart Data
   const pieData = [
@@ -284,9 +289,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onReset }) => {
                 onClick={(state) => {
                   if (state && state.activePayload && state.activePayload.length > 0) {
                     if (chartView === 'unidade') toggleFilterUnit(state.activePayload[0].payload.role);
+                    if (chartView === 'cargo') toggleFilterRole(state.activePayload[0].payload.role);
                   }
                 }}
-                style={{ cursor: chartView === 'unidade' ? 'pointer' : 'default' }}
+                style={{ cursor: 'pointer' }}
               >
                 <XAxis dataKey="role" stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)', fontSize: 12}} axisLine={false} tickLine={false} />
                 <RechartsTooltip 
